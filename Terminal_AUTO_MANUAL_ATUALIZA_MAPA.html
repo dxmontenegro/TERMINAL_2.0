@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terminal do Aluno - EEMTI Dragão do Mar</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root {
+    --primary: #2563eb;
+    --primary-light: #60a5fa;
+    --accent: #10b981;
+    --danger: #ef4444;
+    --warning: #facc15;
+    --bg-dark: #0f172a;
+    --card-bg: rgba(30, 41, 59, 0.92);
+    --border: rgba(255, 255, 255, 0.12);
+    --text-main: #f8fafc;
+    --text-dim: #fffb00;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* =========================================================
+   BARRA SUPERIOR
+========================================================= */
+.topo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 76px;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(12px);
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 2000;
+    border-bottom: 1px solid var(--border);
+}
+
+.esquerda {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.logo {
+    height: 52px;
+    width: 52px;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+}
+
+.identidade-escola {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin-left: 12px;
+}
+
+.nome-escola {
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1.1;
+    font-weight: 900;
+    letter-spacing: .4px;
+    white-space: nowrap;
+}
+
+.subtitulo-escola {
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+.controles {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+}
+
+.timer-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#timer {
+    font-family: monospace;
+    font-size: 27px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 1px;
+}
+
+#fullscreenIndicator {
+    background: var(--accent);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 7px;
+    font-size: 9px;
+    font-weight: 800;
+    display: none;
+}
+
+#avisoEnvio {
+    color: var(--warning);
+    font-size: 11px;
+    font-weight: 800;
+    text-align: right;
+    max-width: 320px;
+    line-height: 1.2;
+}
+
+button {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: 0.25s;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: white;
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.btn-outline:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* =========================================================
+   CARD LATERAL DO ALUNO
+========================================================= */
+#painelAluno {
+    position: fixed;
+    top: 50%;
+    left: 22px;
+    transform: translateY(-50%);
+    width: 275px;
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(14px);
+    padding: 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(96, 165, 250, 0.38);
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.5);
+
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    z-index: 1800;
+}
+
+#painelAluno.ativo {
+    display: grid;
+}
+
+.painel-titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #bfdbfe;
+    font-size: 13px;
+    font-weight: 900;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+.painel-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.painel-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.label {
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.valor {
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.status-badge {
+    width: fit-content;
+    padding: 4px 9px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.status-livre {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-ocupado {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* =========================================================
+   BOTÃO LATERAL DE CONFIRMAÇÃO
+========================================================= */
+.btn-finalizar {
+    position: fixed;
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+
+    width: 125px;
+    height: 125px;
+    padding: 12px;
+
+    border: 4px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    background: linear-gradient(145deg, #fde047, #eab308);
+    color: #111827;
+
+    font-weight: 950;
+    font-size: 14px;
+    line-height: 1.2;
+    text-align: center;
+
+    box-shadow:
+        0 12px 35px rgba(234, 179, 8, 0.4),
+        inset 0 2px 5px rgba(255, 255, 255, 0.45);
+
+    z-index: 1800;
+}
+
+.btn-finalizar.ativo {
+    display: flex;
+}
+
+.btn-finalizar:hover {
+    transform: translateY(-50%) scale(1.09);
+    filter: brightness(1.08);
+    box-shadow:
+        0 16px 48px rgba(250, 204, 21, 0.6),
+        inset 0 2px 5px rgba(255,255,255,0.5);
+}
+
+.btn-finalizar:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* =========================================================
+   ÁREA CENTRAL DO GOOGLE FORMS
+========================================================= */
+.conteudo {
+    position: fixed;
+    top: 76px;
+    bottom: 35px;
+    left: 0;
+    width: 100%;
+    background: #000;
+}
+
+iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* =========================================================
+   MENSAGEM DE AGUARDANDO ALUNO
+========================================================= */
+#identificacaoAluno {
+    position: absolute;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 1000;
+    color: white;
+    font-weight: 900;
+    pointer-events: none;
+    width: min(90%, 900px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#identificacaoAluno .espera {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 55px;
+}
+
+#identificacaoAluno .espera-texto {
+    text-align: center;
+}
+
+#identificacaoAluno .aguardando {
+    font-size: 52px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(255,255,255,.35);
+}
+
+#identificacaoAluno .pc-grande {
+    font-size: 105px;
+    line-height: 1;
+    margin-top: 12px;
+    color: var(--warning);
+    text-shadow: 0 0 25px rgba(250,204,21,.35);
+    letter-spacing: 3px;
+}
+
+#identificacaoAluno .logo-espera {
+    width: 155px;
+    height: 155px;
+    object-fit: contain;
+    border-radius: 24px;
+    border: 2px solid rgba(255,255,255,.15);
+    box-shadow: 0 0 35px rgba(0,0,0,.45);
+}
+
+#identificacaoAluno .nome {
+    font-size: 64px;
+    color: #d9ff00;
+    text-shadow: 0 0 25px rgba(217,255,0,.22);
+}
+
+#identificacaoAluno .subtitulo {
+    font-size: 28px;
+    color: #94a3b8;
+    margin-top: 15px;
+}
+
+/* =========================================================
+   BOTÃO PARA ABRIR A PROVA
+========================================================= */
+#btnIniciarProva {
+    display: none;
+    position: fixed;
+    top: 75%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 30px 60px;
+    font-size: 24px;
+    font-weight: 900;
+    background: var(--accent);
+    color: white;
+    border-radius: 20px;
+    box-shadow: 0 0 50px rgba(16, 185, 129, 0.4);
+    z-index: 3000;
+}
+
+#btnIniciarProva:hover {
+    background: #059669;
+    transform: translate(-50%, -50%) scale(1.04);
+}
+
+/* =========================================================
+   ÁREA DE LIBERAÇÃO MANUAL
+========================================================= */
+#manualArea {
+    position: fixed;
+    top: 86px;
+    right: 20px;
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 1px solid var(--primary);
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 2100;
+}
+
+input {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #0f172a;
+    color: white;
+    width: 220px;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 12px;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+/* =========================================================
+   RODAPÉ
+========================================================= */
+.creditos-desenvolvimento {
+    color: #fffb00;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .2px;
+    white-space: nowrap;
+}
+
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 35px;
+    background: #0f172a;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    z-index: 2500;
+}
+
+/* =========================================================
+   ALERTA DE VIOLAÇÃO
+========================================================= */
+.violation-alert {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.98);
+    z-index: 5000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.alert-card {
+    background: #1e1e1e;
+    border: 2px solid var(--danger);
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+}
+
+.progress-bar {
+    height: 5px;
+    background: var(--danger);
+    width: 0%;
+    transition: width 0.1s linear;
+    margin: 15px 0;
+}
+
+/* =========================================================
+   MODAL DE INSTRUÇÕES
+========================================================= */
+.prova-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 7000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2,6,23,.86);
+    backdrop-filter: blur(8px);
+    padding: 20px;
+}
+
+.prova-modal.ativo {
+    display: flex;
+}
+
+.prova-modal-card {
+    width: min(680px, 94vw);
+    max-height: 90vh;
+    overflow: auto;
+    background: linear-gradient(145deg, #1e293b, #111827);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 24px;
+    box-shadow: 0 25px 80px rgba(0,0,0,.65);
+    padding: 30px;
+    color: #fff;
+}
+
+.prova-modal-cabecalho {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.prova-modal-logo {
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    border-radius: 14px;
+}
+
+.prova-modal-cabecalho h2 {
+    font-size: 24px;
+    margin: 0;
+}
+
+.prova-modal-cabecalho small {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.prova-destaque {
+    background: rgba(37,99,235,.16);
+    border: 1px solid rgba(96,165,250,.25);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 18px;
+}
+
+.prova-destaque .rotulo {
+    color: #94a3b8;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+.prova-destaque .nome-prova {
+    color: #fff;
+    font-size: 22px;
+    font-weight: 900;
+    margin-top: 4px;
+}
+
+.prova-instrucoes {
+    display: grid;
+    gap: 10px;
+    margin: 18px 0 24px;
+}
+
+.prova-instrucao {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: rgba(255,255,255,.04);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: #e2e8f0;
+    line-height: 1.4;
+    font-size: 14px;
+}
+
+.prova-instrucao .icone {
+    font-size: 20px;
+    flex: 0 0 24px;
+}
+
+.prova-aviso-envio {
+    background: rgba(250,204,21,.12);
+    border: 1px solid rgba(250,204,21,.35);
+    color: #fde68a;
+    border-radius: 14px;
+    padding: 14px;
+    font-weight: 800;
+    line-height: 1.4;
+    margin-bottom: 20px;
+}
+
+.btn-comecar-prova {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 12px;
+    background: #10b981;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.btn-comecar-prova:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   POPUP DE CONFIRMAÇÃO DE ENVIO
+========================================================= */
+.envio-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, 0.82);
+    backdrop-filter: blur(9px);
+    padding: 20px;
+}
+.envio-modal.ativo {
+    display: flex;
+    animation: envioFadeIn .2s ease-out;
+}
+.envio-card {
+    width: min(520px, 94vw);
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 1px solid rgba(250, 204, 21, 0.45);
+    border-radius: 24px;
+    padding: 28px;
+    text-align: center;
+    box-shadow: 0 25px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04);
+    animation: envioCardIn .25s ease-out;
+}
+.envio-icone {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(250, 204, 21, .12);
+    border: 2px solid rgba(250, 204, 21, .45);
+    font-size: 34px;
+}
+.envio-card h2 {
+    color: #f8fafc;
+    font-size: 23px;
+    margin-bottom: 10px;
+}
+.envio-card p {
+    color: #cbd5e1;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+.envio-destaque {
+    color: #fde047;
+    font-weight: 900;
+}
+.envio-contador-area {
+    margin: 10px 0 22px;
+}
+.envio-contador {
+    font-family: monospace;
+    font-size: 48px;
+    line-height: 1;
+    font-weight: 950;
+    color: #facc15;
+    text-shadow: 0 0 20px rgba(250,204,21,.28);
+}
+.envio-contador-legenda {
+    margin-top: 7px;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+}
+.envio-progress-bg {
+    width: 100%;
+    height: 7px;
+    background: rgba(255,255,255,.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 13px;
+}
+#envioProgress {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #facc15, #fde68a);
+    border-radius: 999px;
+    transition: width 1s linear;
+}
+.envio-acoes {
+    display: flex;
+    gap: 12px;
+}
+.envio-btn {
+    flex: 1;
+    min-height: 48px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+}
+.envio-btn-cancelar {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    color: #e2e8f0;
+}
+.envio-btn-cancelar:hover {
+    background: rgba(255,255,255,.11);
+}
+.envio-btn-ok {
+    background: linear-gradient(145deg, #facc15, #eab308);
+    color: #111827;
+    box-shadow: 0 8px 25px rgba(234,179,8,.25);
+}
+.envio-btn-ok:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+.envio-btn:active {
+    transform: scale(.98);
+}
+@keyframes envioFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes envioCardIn {
+    from { opacity: 0; transform: translateY(12px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 650px) {
+    .envio-card { padding: 23px 18px; }
+    .envio-card h2 { font-size: 20px; }
+    .envio-acoes { flex-direction: column-reverse; }
+}
+
+/* =========================================================
+   RESPONSIVIDADE
+========================================================= */
+@media (max-width: 900px) {
+    #painelAluno {
+        left: 12px;
+        width: 225px;
+        padding: 14px;
+    }
+
+    .btn-finalizar {
+        right: 12px;
+        width: 95px;
+        height: 95px;
+        font-size: 11px;
+        border-width: 3px;
+    }
+
+    #avisoEnvio {
+        display: none;
+    }
+
+    #identificacaoAluno .espera {
+        gap: 25px;
+    }
+
+    #identificacaoAluno .aguardando {
+        font-size: 38px;
+    }
+
+    #identificacaoAluno .pc-grande {
+        font-size: 75px;
+    }
+
+    #identificacaoAluno .logo-espera {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+@media (max-width: 650px) {
+    .topo {
+        height: 65px;
+        padding: 0 10px;
+    }
+
+    .logo {
+        width: 43px;
+        height: 43px;
+    }
+
+    #timer {
+        font-size: 21px;
+    }
+
+    .conteudo {
+        top: 65px;
+    }
+
+    #painelAluno {
+        top: 76px;
+        left: 8px;
+        transform: none;
+        width: min(245px, calc(100vw - 16px));
+        max-height: 260px;
+        border-radius: 15px;
+    }
+
+    .btn-finalizar {
+        top: auto;
+        bottom: 48px;
+        right: 12px;
+        transform: none;
+        width: 84px;
+        height: 84px;
+        font-size: 10px;
+    }
+
+    .btn-finalizar:hover {
+        transform: scale(1.06);
+    }
+
+    .btn-finalizar:active {
+        transform: scale(0.96);
+    }
+
+    #fullscreenIndicator {
+        display: none !important;
+    }
+
+    #identificacaoAluno .espera {
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    #identificacaoAluno .aguardando {
+        font-size: 29px;
+    }
+
+    #identificacaoAluno .pc-grande {
+        font-size: 62px;
+    }
+
+    #identificacaoAluno .nome {
+        font-size: 40px;
+    }
+
+    #identificacaoAluno .subtitulo {
+        font-size: 21px;
+    }
+
+    .footer {
+        padding: 0 10px;
+        font-size: 9px;
+    }
+}
+
+/* =========================================================
+   SELETOR PROTEGIDO DE MODO — AUTOMÁTICO / MANUAL
+========================================================= */
+#seletorModo {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, .96);
+    backdrop-filter: blur(12px);
+    padding: 20px;
+}
+#seletorModo.oculto { display: none; }
+#seletorModo.ativo { display: flex; }
+
+.seletor-modo-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 8px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 8px;
+    background: rgba(30,41,59,.75);
+    color: #e2e8f0;
+    font-size: 10px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.seletor-modo-header select {
+    border: 0;
+    outline: none;
+    border-radius: 5px;
+    padding: 4px 7px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.btn-cancelar-modo {
+    margin-top: 8px;
+    width: 100%;
+    border: 1px solid rgba(255,255,255,.15);
+    background: transparent;
+    color: #94a3b8;
+    border-radius: 9px;
+    padding: 10px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.modo-card {
+    width: min(520px, 94vw);
+    background: linear-gradient(145deg, #1e293b, #111827);
+    border: 1px solid rgba(96,165,250,.35);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 25px 80px rgba(0,0,0,.75);
+    text-align: center;
+}
+.modo-logo {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+    border-radius: 16px;
+    margin-bottom: 10px;
+}
+.modo-card h1 {
+    font-size: 23px;
+    margin-bottom: 5px;
+}
+.modo-card .modo-sub {
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 20px;
+}
+.modo-opcoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.modo-opcao {
+    position: relative;
+}
+.modo-opcao input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.modo-opcao label {
+    display: flex;
+    min-height: 105px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    padding: 15px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 15px;
+    background: rgba(255,255,255,.035);
+    color: #e2e8f0;
+    cursor: pointer;
+    font-weight: 900;
+    transition: .2s;
+}
+.modo-opcao label span {
+    font-size: 30px;
+}
+.modo-opcao label small {
+    color: #94a3b8;
+    font-size: 10px;
+    font-weight: 700;
+}
+.modo-opcao input:checked + label {
+    border-color: #facc15;
+    background: rgba(250,204,21,.10);
+    box-shadow: 0 0 0 3px rgba(250,204,21,.08);
+}
+.modo-senha {
+    margin-top: 16px;
+    text-align: left;
+}
+.modo-senha label {
+    display: block;
+    color: #cbd5e1;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .7px;
+    margin-bottom: 5px;
+}
+#senhaModo {
+    width: 100%;
+    height: 44px;
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 11px;
+    background: #0b1220;
+    color: #fff;
+    text-align: center;
+    letter-spacing: 5px;
+    font-weight: 900;
+    font-size: 16px;
+    outline: none;
+}
+#senhaModo:focus {
+    border-color: #facc15;
+    box-shadow: 0 0 0 3px rgba(250,204,21,.10);
+}
+#erroModo {
+    display: none;
+    margin-top: 10px;
+    padding: 9px;
+    border-radius: 9px;
+    color: #fca5a5;
+    background: rgba(239,68,68,.10);
+    border: 1px solid rgba(239,68,68,.25);
+    font-size: 11px;
+    font-weight: 800;
+}
+.btn-confirmar-modo {
+    width: 100%;
+    height: 46px;
+    margin-top: 12px;
+    border-radius: 11px;
+    background: linear-gradient(145deg,#facc15,#eab308);
+    color: #111827;
+    font-weight: 950;
+    font-size: 13px;
+}
+.btn-confirmar-modo:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+
+/* =========================================================
+   TERMINAL MANUAL INTEGRADO
+========================================================= */
+#terminalManual {
+    position: fixed;
+    inset: 76px 0 35px 0;
+    z-index: 6000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+    padding: 18px;
+}
+#terminalManual.ativo { display: flex; }
+
+.manual-card {
+    width: min(560px, 94vw);
+    max-height: calc(100vh - 115px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    background: linear-gradient(145deg,#1e293b,#111827);
+    border: 1px solid rgba(96,165,250,.30);
+    border-radius: 22px;
+    padding: 18px 24px;
+    text-align: center;
+    box-shadow: 0 25px 80px rgba(0,0,0,.65);
+}
+.manual-card .logo-grande {
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    border-radius: 16px;
+    margin-bottom: 4px;
+}
+.manual-card h2 {
+    font-size: 21px;
+    margin-bottom: 4px;
+}
+.manual-descricao {
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.35;
+    margin-bottom: 8px;
+}
+.manual-pc {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(250,204,21,.10);
+    border: 1px solid rgba(250,204,21,.25);
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: #fde68a;
+    font-size: 10px;
+    font-weight: 900;
+    margin-bottom: 8px;
+}
+.manual-seletor {
+    width: min(460px, 92vw);
+    margin: 0 auto;
+    text-align: left;
+}
+.manual-seletor label {
+    display: block;
+    margin: 7px 0 3px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .6px;
+    color: #cbd5e1;
+}
+.manual-seletor select,
+#senhaManual {
+    width: 100%;
+    height: 38px;
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 10px;
+    background: #111827;
+    color: #f8fafc;
+    padding: 0 10px;
+    font-size: 12px;
+    outline: none;
+}
+.manual-seletor select:focus,
+#senhaManual:focus {
+    border-color: #facc15;
+    box-shadow: 0 0 0 3px rgba(250,204,21,.10);
+}
+.manual-resumo {
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 9px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.09);
+    text-align: center;
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.3;
+}
+.manual-resumo.pronto {
+    color: #f8fafc;
+    border-color: rgba(250,204,21,.4);
+}
+.manual-senha {
+    margin-top: 8px;
+}
+#senhaManual {
+    text-align: center;
+    letter-spacing: 4px;
+    font-weight: 900;
+    margin-bottom: 7px;
+}
+.manual-btn {
+    width: 100%;
+    height: 41px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(145deg,#10b981,#059669);
+    color: #fff;
+    font-weight: 950;
+    font-size: 12px;
+}
+.manual-btn:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+#erroManual {
+    display: none;
+    margin-top: 8px;
+    padding: 8px;
+    border-radius: 9px;
+    color: #fca5a5;
+    background: rgba(239,68,68,.10);
+    border: 1px solid rgba(239,68,68,.25);
+    font-size: 10px;
+    font-weight: 800;
+}
+#modoAtual {
+    color: #facc15;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    padding: 5px 8px;
+    border: 1px solid rgba(250,204,21,.25);
+    border-radius: 7px;
+    background: rgba(250,204,21,.07);
+}
+@media(max-width:650px){
+    .modo-opcoes { grid-template-columns: 1fr; }
+    .modo-card { padding: 22px 17px; }
+    #terminalManual { inset: 65px 0 35px 0; padding: 12px; }
+    .manual-card { padding: 14px 16px; }
+    .manual-card .logo-grande { width: 48px; height: 48px; }
+    .manual-card h2 { font-size: 18px; }
+    .manual-seletor select, #senhaManual { height: 35px; }
+}
+
+</style>
+</head>
+
+<body>
+
+
+<!-- =========================================================
+     JANELA DE SENHA PARA TROCA DE MODO
+========================================================= -->
+<div id="seletorModo">
+    <div class="modo-card">
+        <img src="imagem1.png" class="modo-logo" alt="EEMTI Dragão do Mar">
+        <h1>CONFIRMAR MODO</h1>
+        <div class="modo-sub" id="textoModoSenha">
+            Digite a senha para alterar o modo deste terminal.
+        </div>
+
+        <div class="modo-senha">
+            <label for="senhaModo">🔐 SENHA DE CONFIRMAÇÃO</label>
+            <input id="senhaModo" type="password" inputmode="numeric"
+                   maxlength="6" autocomplete="off"
+                   placeholder="Digite a senha"
+                   onkeydown="if(event.key==='Enter') confirmarModo()">
+        </div>
+
+        <div id="erroModo"></div>
+
+        <button class="btn-confirmar-modo" onclick="confirmarModo()">
+            🔓 CONFIRMAR MODO
+        </button>
+        <button class="btn-cancelar-modo" onclick="cancelarTrocaModo()">
+            CANCELAR
+        </button>
+    </div>
+</div>
+
+<!-- =========================================================
+     TERMINAL MANUAL — INTEGRADO AO MESMO HTML
+========================================================= -->
+<div id="terminalManual">
+    <div class="manual-card">
+        <img src="imagem1.png" class="logo-grande" alt="EEMTI Dragão do Mar">
+        <h2>TERMINAL MANUAL DE PROVAS</h2>
+
+        <div class="manual-descricao">
+            Selecione a avaliação, o turno e a série. O sistema identificará a prova automaticamente.
+        </div>
+
+        <div class="manual-pc">
+            🖥️ TERMINAL: <span id="manualPcNome">PC1</span>
+        </div>
+
+        <div class="manual-seletor">
+            <label>📚 PROVA</label>
+            <select id="selectAreaManual" onchange="atualizarSelecaoManual()">
+                <option value="">Selecione a prova</option>
+                <option value="MAT2">MATEMÁTICA</option>
+                <option value="LIN2">LINGUAGENS</option>
+                <option value="NAT2">CIÊNCIAS DA NATUREZA</option>
+                <option value="HUM2">CIÊNCIAS HUMANAS</option>
+            </select>
+
+            <label>🌙 TURNO</label>
+            <select id="selectTurnoManual" onchange="atualizarSelecaoManual()">
+                <option value="">Selecione o turno</option>
+                <option value="I">INTEGRAL</option>
+                <option value="N">NOITE</option>
+            </select>
+
+            <label>🎓 SÉRIE</label>
+            <select id="selectSerieManual" onchange="atualizarSelecaoManual()">
+                <option value="">Selecione a série</option>
+                <option value="1">1º ANO</option>
+                <option value="2">2º ANO</option>
+                <option value="3">3º ANO</option>
+            </select>
+
+            <div id="resumoManual" class="manual-resumo">
+                Selecione os três campos acima.
+            </div>
+
+            <div id="areaSenhaManual" class="manual-senha" style="display:none;">
+                <label>🔐 SENHA PARA LIBERAR A PROVA</label>
+                <input id="senhaManual" type="password" inputmode="numeric"
+                       maxlength="6" autocomplete="off"
+                       placeholder="Digite a senha"
+                       onkeydown="if(event.key==='Enter') confirmarSelecaoManual()">
+
+                <button class="manual-btn" onclick="confirmarSelecaoManual()">
+                    🚀 CONFIRMAR E ABRIR PROVA
+                </button>
+            </div>
+
+            <div id="erroManual"></div>
+        </div>
+    </div>
+</div>
+
+<button id="btnIniciarProva" onclick="confirmarInicio()">🚀 INICIAR PROVA</button>
+
+<button
+    id="btnFinalizarLateral"
+    class="btn-finalizar"
+    type="button"
+    onclick="nova()"
+>
+    🏁<br>
+    CONFIRMAR<br>
+    ENVIO
+</button>
+
+<div class="topo">
+    <div class="esquerda">
+        <img src="imagem1.png" class="logo" alt="Logo EEMTI Dragão do Mar">
+        <div class="identidade-escola">
+            <div class="nome-escola">EEMTI DRAGÃO DO MAR</div>
+            <div class="subtitulo-escola">TERMINAL DE AVALIAÇÃO</div>
+        </div>
+    </div>
+
+    <div class="controles">
+        <div id="fullscreenIndicator">🖥️ AMBIENTE PROTEGIDO ATIVO</div>
+        <div class="seletor-modo-header">
+            <span>⚙️ ESCOLHA O MODO:</span>
+            <select id="modoHeader" onchange="solicitarTrocaModo(this.value)">
+                <option value="AUTO">AUTO</option>
+                <option value="MANUAL">MANUAL</option>
+            </select>
+        </div>
+
+        <div class="timer-row">
+            <div id="timer">40:00</div>
+
+            <div class="botoes-acao">
+                <button class="btn-outline" onclick="alternarModo()" title="Liberar PC manualmente">
+                    🔍
+                </button>
+            </div>
+        </div>
+
+        <div id="avisoEnvio">
+            ⚠️ NÃO ESQUEÇA: CLIQUE EM ENVIAR NO FORMULÁRIO ANTES DE FINALIZAR A PROVA.
+        </div>
+    </div>
+
+    <div id="manualArea">
+        <input
+            id="matricula"
+            placeholder="Aguardando leitura..."
+            onkeydown="if(event.key==='Enter'){event.preventDefault(); iniciarManual();}"
+        >
+
+        <button class="btn-primary" onclick="iniciarManual()">
+            LIBERAR PC
+        </button>
+    </div>
+</div>
+
+<div id="painelAluno"></div>
+
+<div class="conteudo">
+    <div id="identificacaoAluno"></div>
+    <iframe id="frame" title="Formulário da prova"></iframe>
+</div>
+
+<div class="prova-modal" id="provaModal">
+    <div class="prova-modal-card">
+        <div class="prova-modal-cabecalho">
+            <img src="imagem1.png" class="prova-modal-logo" alt="EEMTI Dragão do Mar">
+
+            <div>
+                <h2>EEMTI DRAGÃO DO MAR</h2>
+                <small>Orientações para realização da avaliação</small>
+            </div>
+        </div>
+
+        <div class="prova-destaque">
+            <div class="rotulo">Você está prestes a iniciar</div>
+            <div class="nome-prova" id="modalNomeProva">PROVA</div>
+        </div>
+
+        <div class="prova-instrucoes">
+            <div class="prova-instrucao">
+                <span class="icone">📝</span>
+                <span>Leia cada questão com atenção antes de responder.</span>
+            </div>
+
+            <div class="prova-instrucao">
+                <span class="icone">⏱️</span>
+                <span>O tempo da avaliação é controlado pelo terminal. Organize seu tempo e evite deixar questões sem resposta.</span>
+            </div>
+
+            <div class="prova-instrucao">
+                <span class="icone">🔒</span>
+                <span>Durante a prova, permaneça no ambiente da avaliação e não utilize outros sites, aplicativos ou recursos externos.</span>
+            </div>
+
+            <div class="prova-instrucao">
+                <span class="icone">🔎</span>
+                <span>Confira suas respostas antes de finalizar. Depois de enviar, verifique se o formulário confirmou o envio.</span>
+            </div>
+        </div>
+
+        <div class="prova-aviso-envio">
+            ⚠️ IMPORTANTE: ao terminar, clique no botão <strong>ENVIAR</strong> do Google Forms.
+            Sua avaliação só será registrada corretamente após o envio do formulário.
+        </div>
+
+        <button class="btn-comecar-prova" onclick="iniciarProvaAposInstrucoes()">
+            ✅ ENTENDI. INICIAR PROVA
+        </button>
+    </div>
+</div>
+
+<div class="footer">
+    <div>🏫 EEMTI DRAGÃO DO MAR</div>
+    <div>PC: <strong id="pcNome" style="color: var(--primary-light)">-</strong></div>
+    <div class="creditos-desenvolvimento">© 2026 D.S.Montenegro · Desenvolvido por D.S.Montenegro · All Rights Reserved</div>
+</div>
+
+
+<div class="envio-modal" id="envioModal">
+    <div class="envio-card">
+        <div class="envio-icone">🏁</div>
+        <h2>Confirmar finalização da prova?</h2>
+        <p>
+            Certifique-se de que você já clicou em
+            <span class="envio-destaque">ENVIAR</span>
+            no Google Forms antes de continuar.
+        </p>
+
+        <div class="envio-contador-area">
+            <div class="envio-contador" id="envioCountdown">6</div>
+            <div class="envio-contador-legenda">
+                confirmação automática em segundos
+            </div>
+            <div class="envio-progress-bg">
+                <div id="envioProgress"></div>
+            </div>
+        </div>
+
+        <div class="envio-acoes">
+            <button type="button" class="envio-btn envio-btn-cancelar" onclick="cancelarEnvio()">
+                CANCELAR
+            </button>
+            <button type="button" class="envio-btn envio-btn-ok" onclick="confirmarEnvio()">
+                OK — FINALIZAR
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="violation-alert" id="violationAlert">
+    <div class="alert-card">
+        <h1 style="color: var(--danger); font-size: 40px;">⚠️</h1>
+        <h3 style="margin: 10px 0">VIOLAÇÃO DETECTADA</h3>
+
+        <div style="width: 200px; background: #333; border-radius: 3px;">
+            <div class="progress-bar" id="progressFill"></div>
+        </div>
+
+        <div style="font-weight: bold;">
+            <span id="countdown">5</span>s
+        </div>
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://fwemutmkbvnriqxxufhx.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3ZW11dG1rYnZucmlxeHh1Zmh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNjM2MzMsImV4cCI6MjA4ODczOTYzM30.HCXIoI_r7_yGJntTPIizhrP4apxXV3Ahd6Jk2AkvKas";
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function getNomePC() {
+    const params = new URLSearchParams(window.location.search);
+
+    let pc = (params.get("pc") || "PC1").trim().toUpperCase();
+
+    pc = pc.replace(/\s+/g, "").replace("-", "");
+
+    return pc;
+}
+
+const nomePC = getNomePC();
+
+document.getElementById("pcNome").textContent = nomePC;
+
+const provas = {
+    /* 1º ANO INTEGRAL */
+    DMAR1MAT2: "https://docs.google.com/forms/d/e/1FAIpQLSfODOWlKQoW-FFkJpDrFJrFM6k_1BrziVXNz054YJykRNYHBQ/viewform?embedded=true",
+    DMAR1NAT2: "https://docs.google.com/forms/d/e/1FAIpQLSciGw2nvQ-gUvD47rpP44V-CIWoSu1PwmEPaWGPaXzRoZOBUg/viewform?embedded=true",
+    DMAR1HUM2: "https://docs.google.com/forms/d/e/1FAIpQLSfngsSALtxLwZGSMX6LoKb7miv_bXJC4Kbuh3Am0rAuvlneSQ/viewform?embedded=true",
+    DMAR1LIN2: "https://docs.google.com/forms/d/e/1FAIpQLSdW-1Ovew57ft-ZyANhOY9rCW_33RcefgmBhBKKf8Cbqq1SGw/viewform?embedded=true",
+
+    /* 1º ANO NOITE */
+    DMAR1MAT2N: "https://docs.google.com/forms/d/e/1FAIpQLSe0Wd1hIeHvy3Bhvi0BOQEoNUfeyNEyMlmZRFB-6Jbs_7VpvA/viewform?embedded=true",
+    DMAR1NAT2N: "https://docs.google.com/forms/d/e/1FAIpQLSeSK5aIMf0-2Zur2TL5UzcbmrKFqPQtgPGO58-ji1nLXhv9UA/viewform?embedded=true",
+    DMAR1HUM2N: "https://docs.google.com/forms/d/e/1FAIpQLSfkJH8g5y09tk7RcYFVaHSL83XlPGWliK3a-zVmUe_4tvKeZg/viewform?embedded=true",
+    DMAR1LIN2N: "https://docs.google.com/forms/d/e/1FAIpQLScWkeeT8z2vVwj5jNsgc7GJ9h12brNRbY7LbIoD7NqzHo0mSw/viewform?embedded=true",
+
+    /* 2º ANO INTEGRAL */
+    DMAR2MAT2: "https://docs.google.com/forms/d/e/1FAIpQLSf1QFGzKR9LwTZ9ich1Vu5qHVW5bpCgsDluggkskm4JDIAOdQ/viewform?embedded=true",
+    DMAR2NAT2: "https://docs.google.com/forms/d/e/1FAIpQLSdYqR_ef795Y1gvrMRo0g2Gr2Y-n6r-F6G_vuxbPfJo2VOFuQ/viewform?embedded=true",
+    DMAR2HUM2: "https://docs.google.com/forms/d/e/1FAIpQLSdruXU6mBlkZf2G-Vw6mL4jN4Lb1q4wSQSuQSIY0Sn_jO11ag/viewform?embedded=true",
+    DMAR2LIN2: "https://docs.google.com/forms/d/e/1FAIpQLScWB4GIyXL2gImCdlWnJDuu02Cpuz3bseQAMxsaGD4EUVb9zg/viewform?embedded=true",
+
+    /* 2º ANO NOITE */
+    DMAR2MAT2N: "https://docs.google.com/forms/d/e/1FAIpQLSeLsq_V3AUL5SAPmM0gj_YLwI_cO8CB5l7C4-CuYeZylkXogA/viewform?embedded=true",
+    DMAR2NAT2N: "https://docs.google.com/forms/d/e/1FAIpQLScIIxm1XAeD-AkdOJGiuE00BBFSixzvmAK0TbHaxqZYMzGVoA/viewform?embedded=true",
+    DMAR2HUM2N: "https://docs.google.com/forms/d/e/1FAIpQLSffK_eykiTnYwIyJiG_6qjFfu40kdhrwG2HHR3sKXaB89fX_Q/viewform?embedded=true",
+    DMAR2LIN2N: "https://docs.google.com/forms/d/e/1FAIpQLSfAmuG7s9J0s0p6HnfYj4DdPDfS2l2W7U8PKwIpB2aJg8knTA/viewform?embedded=true"
+};
+
+let modoOperacao = "AUTO";
+let monitoramentoAtivo = false;
+let alunoAtual = null;
+let areaAtual = null;
+let timerLoop = null;
+let tempo = 2400;
+let provaIniciada = false;
+
+let codigoManualAtual = null;
+let linkManualAtual = null;
+let nomeManualAtual = null;
+
+const SENHA_MODO = "102030";
+const SENHA_MANUAL = "102030";
+
+function esconderPainelLateral() {
+    document.getElementById("painelAluno").classList.remove("ativo");
+    document.getElementById("btnFinalizarLateral").classList.remove("ativo");
+}
+
+function mostrarPainelLateral() {
+    document.getElementById("painelAluno").classList.add("ativo");
+    document.getElementById("btnFinalizarLateral").classList.add("ativo");
+}
+
+function inicial() {
+    const painel = document.getElementById("painelAluno");
+
+    esconderPainelLateral();
+
+    painel.innerHTML = `
+        <div class="painel-titulo">👨‍🎓 DADOS DO ALUNO</div>
+
+        <div class="painel-row">
+            <span class="label">Aluno</span>
+            <span class="valor">Aguardando aluno</span>
+        </div>
+
+        <div class="painel-row">
+            <span class="label">Status</span>
+            <span class="status-badge status-livre">LIVRE</span>
+        </div>
+    `;
+
+    document.getElementById("identificacaoAluno").innerHTML = `
+        <div class="espera">
+            <div class="espera-texto">
+                <div class="aguardando">AGUARDANDO ALUNO</div>
+                <div class="pc-grande">${nomePC}</div>
+            </div>
+
+            <img
+                src="imagem1.png"
+                class="logo-espera"
+                alt="EEMTI Dragão do Mar"
+            >
+        </div>
+    `;
+
+    document.getElementById("identificacaoAluno").style.display = "flex";
+}
+
+function getSerieCodigo(turma) {
+    const t = String(turma || "").trim().toUpperCase();
+
+    if (["1A", "1B", "1C", "1D"].includes(t)) return "1";
+    if (["2A", "2B", "2C", "2D"].includes(t)) return "2";
+    if (["3A", "3B", "3C", "3D"].includes(t)) return "3";
+
+    return t.charAt(0);
+}
+
+
+function solicitarTrocaModo(novoModo) {
+    // Durante uma prova o modo não pode ser alterado.
+    if (provaIniciada) {
+        document.getElementById("modoHeader").value = modoOperacao;
+        return;
+    }
+
+    if (!novoModo || novoModo === modoOperacao) {
+        document.getElementById("modoHeader").value = modoOperacao;
+        return;
+    }
+
+    modoSolicitado = novoModo;
+    document.getElementById("textoModoSenha").textContent =
+        "Digite a senha para abrir o modo " + (novoModo === "AUTO" ? "AUTOMÁTICO" : "MANUAL") + ".";
+    document.getElementById("senhaModo").value = "";
+    document.getElementById("erroModo").style.display = "none";
+    document.getElementById("seletorModo").classList.add("ativo");
+    setTimeout(() => document.getElementById("senhaModo").focus(), 100);
+}
+
+let modoSolicitado = "AUTO";
+
+async function confirmarModo() {
+    const senha = document.getElementById("senhaModo").value.trim();
+    const erro = document.getElementById("erroModo");
+
+    erro.style.display = "none";
+
+    if (senha !== SENHA_MODO) {
+        erro.textContent = "❌ Senha incorreta. O modo não foi alterado.";
+        erro.style.display = "block";
+        document.getElementById("senhaModo").select();
+        return;
+    }
+
+    modoOperacao = modoSolicitado;
+    document.getElementById("modoHeader").value = modoOperacao;
+    document.getElementById("seletorModo").classList.remove("ativo");
+
+    if (modoOperacao === "AUTO") {
+        // Se estava no MANUAL sem prova iniciada, devolve o PC ao mapa como LIVRE.
+        const { error: erroLiberar } = await liberarTerminalMapa();
+        if (erroLiberar) {
+            modoOperacao = "MANUAL";
+            document.getElementById("modoHeader").value = "MANUAL";
+            document.getElementById("erroModo").textContent =
+                "❌ Não foi possível liberar este PC no mapa.";
+            document.getElementById("erroModo").style.display = "block";
+            return;
+        }
+
+        document.getElementById("terminalManual").classList.remove("ativo");
+        document.getElementById("frame").style.display = "none";
+        document.getElementById("identificacaoAluno").style.display = "flex";
+        monitoramentoAtivo = true;
+        inicial();
+        verificarStatus();
+    } else {
+        // Entrar no MANUAL já reserva o PC no mapa como OCUPADO.
+        const { error: erroOcupacao } = await ocuparTerminalMapa();
+        if (erroOcupacao) {
+            modoOperacao = "AUTO";
+            document.getElementById("modoHeader").value = "AUTO";
+            document.getElementById("erroModo").textContent =
+                "❌ Não foi possível marcar este PC como OCUPADO no mapa.";
+            document.getElementById("erroModo").style.display = "block";
+            return;
+        }
+        entrarModoManual();
+    }
+}
+
+function cancelarTrocaModo() {
+    document.getElementById("seletorModo").classList.remove("ativo");
+    document.getElementById("senhaModo").value = "";
+    document.getElementById("modoHeader").value = modoOperacao;
+}
+
+async function ocuparTerminalMapa() {
+    const { error } = await client
+        .from("provas_terminais")
+        .update({
+            status: "ocupado",
+            aluno_id: null
+        })
+        .eq("nome", nomePC);
+
+    if (error) console.error("Erro ao ocupar terminal no mapa:", error);
+    return { error };
+}
+
+async function liberarTerminalMapa() {
+    const { error } = await client
+        .from("provas_terminais")
+        .update({
+            status: "livre",
+            aluno_id: null
+        })
+        .eq("nome", nomePC);
+
+    if (error) console.error("Erro ao liberar terminal no mapa:", error);
+    return { error };
+}
+
+async function entrarModoManual() {
+    monitoramentoAtivo = false;
+    alunoAtual = null;
+    areaAtual = null;
+
+    document.getElementById("manualPcNome").textContent = nomePC;
+    document.getElementById("terminalManual").classList.add("ativo");
+
+    document.getElementById("frame").style.display = "none";
+    document.getElementById("identificacaoAluno").style.display = "none";
+    document.getElementById("btnIniciarProva").style.display = "none";
+
+    esconderPainelLateral();
+
+    setTimeout(() => {
+        document.getElementById("selectAreaManual").focus();
+    }, 100);
+}
+
+function mostrarErroManual(msg) {
+    const erro = document.getElementById("erroManual");
+    erro.textContent = msg;
+    erro.style.display = "block";
+}
+
+function atualizarSelecaoManual() {
+    const area = document.getElementById("selectAreaManual").value;
+    const turno = document.getElementById("selectTurnoManual").value;
+    const serie = document.getElementById("selectSerieManual").value;
+    const resumo = document.getElementById("resumoManual");
+    const areaSenha = document.getElementById("areaSenhaManual");
+    const erro = document.getElementById("erroManual");
+
+    erro.style.display = "none";
+    areaSenha.style.display = "none";
+
+    if (!area || !turno || !serie) {
+        resumo.classList.remove("pronto");
+        resumo.textContent = "Selecione os três campos acima.";
+        return;
+    }
+
+    const codigo = "DMAR" + serie + area + (turno === "N" ? "N" : "");
+    const link = provas[codigo];
+
+    if (!link) {
+        resumo.classList.add("pronto");
+        resumo.textContent = "⚠️ Esta combinação ainda não possui uma prova cadastrada.";
+        return;
+    }
+
+    const nomesArea = {
+        MAT2: "MATEMÁTICA",
+        NAT2: "CIÊNCIAS DA NATUREZA",
+        HUM2: "CIÊNCIAS HUMANAS",
+        LIN2: "LINGUAGENS"
+    };
+
+    const nomesTurno = { I: "INTEGRAL", N: "NOITE" };
+    const nomesSerie = { "1": "1º ANO", "2": "2º ANO", "3": "3º ANO" };
+
+    resumo.classList.add("pronto");
+    resumo.innerHTML =
+        "<strong>" + nomesArea[area] + "</strong> • " +
+        nomesTurno[turno] + " • " +
+        nomesSerie[serie] +
+        "<br><small>Código: " + codigo + "</small>";
+
+    areaSenha.style.display = "block";
+
+    setTimeout(() => {
+        document.getElementById("senhaManual").focus();
+    }, 50);
+}
+
+function confirmarSelecaoManual() {
+    const area = document.getElementById("selectAreaManual").value;
+    const turno = document.getElementById("selectTurnoManual").value;
+    const serie = document.getElementById("selectSerieManual").value;
+    const senha = document.getElementById("senhaManual").value.trim();
+
+    if (!area || !turno || !serie) {
+        mostrarErroManual("Selecione a prova, o turno e a série.");
+        return;
+    }
+
+    const codigo = "DMAR" + serie + area + (turno === "N" ? "N" : "");
+    const link = provas[codigo];
+
+    if (!link) {
+        mostrarErroManual("⚠️ Esta prova ainda não está cadastrada para essa combinação.");
+        return;
+    }
+
+    if (senha !== SENHA_MANUAL) {
+        mostrarErroManual("❌ Senha incorreta. A prova não foi liberada.");
+        document.getElementById("senhaManual").select();
+        return;
+    }
+
+    codigoManualAtual = codigo;
+    linkManualAtual = link;
+
+    const nomesArea = {
+        MAT2: "MATEMÁTICA",
+        NAT2: "CIÊNCIAS DA NATUREZA",
+        HUM2: "CIÊNCIAS HUMANAS",
+        LIN2: "LINGUAGENS"
+    };
+
+    nomeManualAtual = nomesArea[area] || "AVALIAÇÃO";
+
+    document.getElementById("modalNomeProva").textContent =
+        nomeManualAtual + " — " + codigoManualAtual;
+
+    document.getElementById("terminalManual").classList.remove("ativo");
+    document.getElementById("provaModal").classList.add("ativo");
+}
+
+async function verificarStatus() {
+    if (!monitoramentoAtivo || provaIniciada) return;
+
+    const { data, error } = await client
+        .from("provas_terminais")
+        .select("status, aluno_id")
+        .eq("nome", nomePC)
+        .single();
+
+    if (error || !data) {
+        console.error(error);
+        return;
+    }
+
+    if (!monitoramentoAtivo || provaIniciada) return;
+
+    if (data.status === "ocupado" && data.aluno_id) {
+        const { data: aluno, error: erroAluno } = await client
+            .from("provas_alunos")
+            .select("*")
+            .eq("id", data.aluno_id)
+            .single();
+
+        if (erroAluno || !aluno) {
+            console.error(erroAluno);
+            return;
+        }
+
+        if (!monitoramentoAtivo || provaIniciada) return;
+
+        const { data: agendas, error: erroAgenda } = await client
+            .from("provas_agenda")
+            .select("*");
+
+        if (erroAgenda || !agendas) {
+            console.error(erroAgenda);
+            return;
+        }
+
+        if (!monitoramentoAtivo || provaIniciada) return;
+
+        const hoje = new Date();
+        const yyyy = hoje.getFullYear();
+        const mm = String(hoje.getMonth() + 1).padStart(2, "0");
+        const dd = String(hoje.getDate()).padStart(2, "0");
+        const dataHoje = `${yyyy}-${mm}-${dd}`;
+
+        const turma = String(aluno.turma || "").trim().toUpperCase();
+
+        const modalidade =
+            turma === "1D" || turma === "2D" || turma === "3C"
+                ? "NOTURNO"
+                : "INTEGRAL";
+
+        const agenda = agendas.find(a =>
+            String(a.data || "").slice(0, 10) === dataHoje &&
+            String(a.modalidade || "").trim().toUpperCase() === modalidade
+        );
+
+        alunoAtual = aluno;
+        areaAtual = agenda ? String(agenda.area || "").trim().toUpperCase() : "";
+
+        carregarAluno(aluno, areaAtual || "Sem agenda");
+
+        document.getElementById("identificacaoAluno").innerHTML = `
+            <div class="nome">${aluno.nome}</div>
+            <div class="subtitulo">${nomePC}</div>
+        `;
+
+        document.getElementById("identificacaoAluno").style.display = "block";
+        document.getElementById("btnIniciarProva").style.display = "block";
+    } else {
+        alunoAtual = null;
+        areaAtual = null;
+
+        document.getElementById("btnIniciarProva").style.display = "none";
+
+        inicial();
+    }
+}
+
+setInterval(() => {
+    if (modoOperacao === "AUTO") verificarStatus();
+}, 2000);
+
+function montarCodigo(aluno, area) {
+    const turma = String(aluno.turma || "").trim().toUpperCase();
+
+    const ehNoturno =
+        turma === "1D" ||
+        turma === "2D" ||
+        turma === "3C";
+
+    const serieCodigo = getSerieCodigo(turma);
+
+    return "DMAR" + serieCodigo + area + (ehNoturno ? "N" : "");
+}
+
+function confirmarInicio() {
+    if (!alunoAtual || provaIniciada) return;
+
+    if (!areaAtual) {
+        alert("Sem agenda para hoje.");
+        return;
+    }
+
+    const codigo = montarCodigo(alunoAtual, areaAtual);
+    const link = provas[codigo];
+
+    console.log("PC:", nomePC);
+    console.log("TURMA:", alunoAtual.turma);
+    console.log("AREA:", areaAtual);
+    console.log("CODIGO:", codigo);
+    console.log("LINK:", link);
+
+    if (!link || !String(link).trim() || link === "URL_AQUI") {
+        alert(`❌ Prova não disponível para ${codigo}.`);
+        return;
+    }
+
+    const nomesArea = {
+        MAT2: "MATEMÁTICA",
+        NAT2: "CIÊNCIAS DA NATUREZA",
+        HUM2: "CIÊNCIAS HUMANAS",
+        LIN2: "LINGUAGENS"
+    };
+
+    const nomeProva = nomesArea[areaAtual] || areaAtual;
+
+    document.getElementById("btnIniciarProva").style.display = "none";
+    document.getElementById("modalNomeProva").textContent = nomeProva;
+    document.getElementById("provaModal").classList.add("ativo");
+}
+
+function iniciarProvaAposInstrucoes() {
+    if (provaIniciada) return;
+
+    let link = null;
+
+    if (modoOperacao === "MANUAL") {
+        if (!codigoManualAtual || !linkManualAtual) return;
+        link = linkManualAtual;
+    } else {
+        if (!alunoAtual || !areaAtual) return;
+
+        const codigo = montarCodigo(alunoAtual, areaAtual);
+        link = provas[codigo];
+
+        if (!link || !String(link).trim() || link === "URL_AQUI") {
+            document.getElementById("provaModal").classList.remove("ativo");
+            alert(`❌ Prova não disponível para ${codigo}.`);
+            return;
+        }
+    }
+
+    monitoramentoAtivo = false;
+    provaIniciada = true;
+
+    document.getElementById("provaModal").classList.remove("ativo");
+    document.getElementById("btnIniciarProva").style.display = "none";
+    document.getElementById("identificacaoAluno").style.display = "none";
+    document.getElementById("terminalManual").classList.remove("ativo");
+
+    if (modoOperacao === "MANUAL") {
+        document.getElementById("painelAluno").innerHTML = `
+            <div class="painel-titulo">📋 DADOS DA AVALIAÇÃO</div>
+            <div class="painel-row">
+                <span class="label">Prova</span>
+                <span class="valor">${nomeManualAtual}</span>
+            </div>
+            <div class="painel-row">
+                <span class="label">Código</span>
+                <span class="valor">${codigoManualAtual}</span>
+            </div>
+            <div class="painel-row">
+                <span class="label">Terminal</span>
+                <span class="valor">${nomePC}</span>
+            </div>
+            <div class="painel-row">
+                <span class="label">Status</span>
+                <span class="status-badge status-ocupado">PROVA LIBERADA</span>
+            </div>
+        `;
+        mostrarPainelLateral();
+    }
+
+    document.getElementById("frame").src = link;
+    document.getElementById("frame").style.display = "block";
+
+    iniciarTimer();
+
+    setTimeout(entrarFullscreen, 500);
+}
+
+function carregarAluno(aluno, area) {
+    const painel = document.getElementById("painelAluno");
+
+    painel.innerHTML = `
+        <div class="painel-titulo">👨‍🎓 DADOS DO ALUNO</div>
+
+        <div class="painel-row">
+            <span class="label">Aluno</span>
+            <span class="valor">${aluno.nome || "-"}</span>
+        </div>
+
+        <div class="painel-row">
+            <span class="label">E-mail</span>
+            <span class="valor">${aluno.email || "-"}</span>
+        </div>
+
+        <div class="painel-row">
+            <span class="label">Turma</span>
+            <span class="valor">${aluno.turma || "-"}</span>
+        </div>
+
+        <div class="painel-row">
+            <span class="label">Matrícula</span>
+            <span class="valor">${aluno.matricula || "-"}</span>
+        </div>
+
+        <div class="painel-row">
+            <span class="label">Prova</span>
+            <span class="valor">${area || "-"}</span>
+        </div>
+
+        <div class="painel-row">
+            <span class="label">Status</span>
+            <span class="status-badge status-ocupado">LIBERADO</span>
+        </div>
+    `;
+
+    mostrarPainelLateral();
+}
+
+async function iniciarManual() {
+    const input = document.getElementById("matricula");
+    const mat = input.value.trim();
+
+    if (!mat) return;
+
+    const { data: aluno, error } = await client
+        .from("provas_alunos")
+        .select("*")
+        .eq("matricula", mat)
+        .single();
+
+    if (error || !aluno) {
+        alert("Aluno não encontrado.");
+        return;
+    }
+
+    const { error: erroUpdate } = await client
+        .from("provas_terminais")
+        .update({
+            status: "ocupado",
+            aluno_id: aluno.id
+        })
+        .eq("nome", nomePC);
+
+    if (erroUpdate) {
+        console.error(erroUpdate);
+        alert("Erro ao liberar o PC.");
+        return;
+    }
+
+    input.value = "";
+
+    alternarModo();
+
+    await verificarStatus();
+}
+
+function iniciarTimer() {
+    tempo = 2400;
+
+    clearInterval(timerLoop);
+
+    document.getElementById("timer").innerText = "40:00";
+
+    timerLoop = setInterval(() => {
+        tempo--;
+
+        const min = Math.floor(tempo / 60);
+        const seg = tempo % 60;
+
+        document.getElementById("timer").innerText =
+            String(min).padStart(2, "0") +
+            ":" +
+            String(seg).padStart(2, "0");
+
+        if (tempo <= 0) {
+            clearInterval(timerLoop);
+        }
+    }, 1000);
+}
+
+function alternarModo() {
+    const area = document.getElementById("manualArea");
+    const input = document.getElementById("matricula");
+
+    area.style.display =
+        area.style.display === "none" || area.style.display === ""
+            ? "flex"
+            : "none";
+
+    if (area.style.display === "flex") {
+        setTimeout(() => input.focus(), 200);
+    }
+}
+
+let envioCountdownLoop = null;
+let envioSegundos = 7;
+
+function nova() {
+    if (!provaIniciada) return;
+
+    clearInterval(envioCountdownLoop);
+
+    envioSegundos = 7;
+
+    document.getElementById("envioCountdown").textContent = envioSegundos;
+    document.getElementById("envioProgress").style.width = "100%";
+    document.getElementById("envioModal").classList.add("ativo");
+
+    envioCountdownLoop = setInterval(() => {
+        envioSegundos--;
+
+        document.getElementById("envioCountdown").textContent =
+            Math.max(0, envioSegundos);
+
+        document.getElementById("envioProgress").style.width =
+            ((envioSegundos / 7) * 100) + "%";
+
+        if (envioSegundos <= 0) {
+            clearInterval(envioCountdownLoop);
+            envioCountdownLoop = null;
+            confirmarEnvio();
+        }
+    }, 1000);
+}
+
+function cancelarEnvio() {
+    clearInterval(envioCountdownLoop);
+    envioCountdownLoop = null;
+
+    document.getElementById("envioModal").classList.remove("ativo");
+
+    envioSegundos = 6;
+    document.getElementById("envioCountdown").textContent = "6";
+    document.getElementById("envioProgress").style.width = "100%";
+}
+
+async function confirmarEnvio() {
+    if (!document.getElementById("envioModal").classList.contains("ativo")) {
+        return;
+    }
+
+    clearInterval(envioCountdownLoop);
+    envioCountdownLoop = null;
+
+    document.getElementById("envioModal").classList.remove("ativo");
+
+    document.getElementById("btnFinalizarLateral").classList.remove("ativo");
+    document.getElementById("painelAluno").classList.remove("ativo");
+
+    if (document.fullscreenElement && document.exitFullscreen) {
+        try {
+            await document.exitFullscreen();
+        } catch (e) {}
+    }
+
+    // MANUAL e AUTOMÁTICO: ao finalizar, o PC volta para LIVRE no mapa.
+    monitoramentoAtivo = true;
+
+    const { error } = await liberarTerminalMapa();
+
+    if (error) {
+        console.error(error);
+        alert("Erro ao liberar o terminal.");
+
+        if (alunoAtual) {
+            mostrarPainelLateral();
+        }
+
+        return;
+    }
+
+    location.reload();
+}
+
+async function entrarFullscreen() {
+    const elem = document.documentElement;
+
+    if (elem.requestFullscreen) {
+        try {
+            await elem.requestFullscreen();
+        } catch (erro) {
+            console.warn("Não foi possível entrar em tela cheia:", erro);
+        }
+    }
+
+    document.getElementById("fullscreenIndicator").style.display = "block";
+}
+
+function mostrarViolacao() {
+    const alerta = document.getElementById("violationAlert");
+
+    if (alerta.style.display === "flex" || monitoramentoAtivo) return;
+
+    alerta.style.display = "flex";
+
+    let tempoV = 5;
+    let progresso = 0;
+
+    const pInt = setInterval(() => {
+        progresso += 2;
+
+        document.getElementById("progressFill").style.width = progresso + "%";
+
+        if (progresso >= 100) {
+            clearInterval(pInt);
+            alerta.style.display = "none";
+            entrarFullscreen();
+        }
+    }, 100);
+
+    const cInt = setInterval(() => {
+        tempoV--;
+
+        document.getElementById("countdown").textContent = Math.max(0, tempoV);
+
+        if (tempoV <= 0) {
+            clearInterval(cInt);
+        }
+    }, 1000);
+}
+
+document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) {
+        mostrarViolacao();
+    }
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+        mostrarViolacao();
+    }
+});
+
+document.addEventListener("keydown", e => {
+    if (
+        e.key === "F11" ||
+        e.key === "Escape" ||
+        (e.ctrlKey && e.key.toLowerCase() === "n")
+    ) {
+        e.preventDefault();
+        mostrarViolacao();
+    }
+});
+
+window.addEventListener("load", () => {
+    // A plataforma abre normalmente em modo AUTOMÁTICO.
+    modoOperacao = "AUTO";
+    monitoramentoAtivo = true;
+    document.getElementById("modoHeader").value = "AUTO";
+    document.getElementById("seletorModo").classList.remove("ativo");
+    inicial();
+    verificarStatus();
+});
+</script>
+
+</body>
+</html>
